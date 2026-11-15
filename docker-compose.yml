@@ -1,0 +1,42 @@
+# llama-top — `docker compose up -d --build`, then open http://localhost:3000
+name: llama-top
+
+services:
+  api:
+    build: ./backend
+    restart: unless-stopped
+    environment:
+      # Ollama running natively on this machine (works on Windows, macOS and Linux).
+      DEFAULT_OLLAMA_URL: ${DEFAULT_OLLAMA_URL-http://host.docker.internal:11434}
+      AGENT_TOKEN: ${AGENT_TOKEN:-}
+      POLL_INTERVAL: ${POLL_INTERVAL:-10}
+      METRICS_INTERVAL: ${METRICS_INTERVAL:-5}
+      RETENTION_DAYS: ${RETENTION_DAYS:-7}
+    extra_hosts:
+      - "host.docker.internal:host-gateway" # needed on Linux; harmless on Docker Desktop
+    volumes:
+      - llamatop-data:/data
+
+  web:
+    build: ./front
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      # Loopback by default. Set LLAMATOP_BIND=0.0.0.0 to expose on your network.
+      - "${LLAMATOP_BIND:-127.0.0.1}:${LLAMATOP_PORT:-3000}:80"
+
+  # Optional: push metrics from another machine/VM. `docker compose --profile agent up -d agent`
+  agent:
+    profiles: ["agent"]
+    build: ./backend
+    restart: unless-stopped
+    command: ["python", "-m", "app.agent"]
+    environment:
+      LLAMATOP_SERVER: ${LLAMATOP_SERVER:-http://web}
+      AGENT_TOKEN: ${AGENT_TOKEN:-}
+      AGENT_NAME: ${AGENT_NAME:-agent}
+
+volumes:
+  llamatop-data:
