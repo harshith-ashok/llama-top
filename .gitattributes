@@ -1,0 +1,4 @@
+# Keep LF endings so Docker builds work from Windows checkouts.
+* text=auto eol=lf
+*.png binary
+*.woff2 binary
