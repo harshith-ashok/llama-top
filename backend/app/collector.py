@@ -70,7 +70,10 @@ class Collector:
         dt = max(now - self._last_t, 1e-6)
         self._last_t = now
         mem, swap = psutil.virtual_memory(), psutil.swap_memory()
-        freq = psutil.cpu_freq()
+        try:
+            freq = psutil.cpu_freq()
+        except (AttributeError, NotImplementedError, OSError):
+            freq = None  # unsupported on some platforms (e.g. Apple Silicon)
         try:
             load = list(psutil.getloadavg())
         except (OSError, AttributeError):
